@@ -25,6 +25,9 @@ int main(int argc, const char **argv) {
         parser, "trace",
         "Trace file, setting this option will ignore -s option",
         {'t', "trace"});
+    args::ValueFlag<std::string> host_arg(
+        parser, "host_type", "host types - cpu, accelerator",
+        {"ho", "host"}, "cpu");
     args::Positional<std::string> config_arg(
         parser, "config", "The config file name (mandatory)");
 
@@ -49,10 +52,15 @@ int main(int argc, const char **argv) {
     std::string output_dir = args::get(output_dir_arg);
     std::string trace_file = args::get(trace_file_arg);
     std::string stream_type = args::get(stream_arg);
+    std::string host_type = args::get(host_arg);
 
     CPU *cpu;
     if (!trace_file.empty()) {
-        cpu = new TraceBasedCPU(config_file, output_dir, trace_file);
+        if (host_type == "accelerator" || host_type == "a") {
+            cpu = new TraceBasedAccelerator(config_file, output_dir, trace_file);
+        } else {
+            cpu = new TraceBasedCPU(config_file, output_dir, trace_file);
+        }
     } else {
         if (stream_type == "stream" || stream_type == "s") {
             cpu = new StreamCPU(config_file, output_dir);

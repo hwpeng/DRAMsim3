@@ -13,6 +13,9 @@ release
 *.pyc
 *.vh
 .vs/
+output/
+new_configs/
+*.trace
 
 # Compiled Object files
 *.slo

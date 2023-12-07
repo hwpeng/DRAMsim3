@@ -10,15 +10,17 @@ class Generator():
     Format agnostic address stream generator
     """
 
-    def __init__(self, stream_type, interarrival, ratio, gb):
+    def __init__(self, stream_type, interarrival, ratio, gb, parallel):
         # convert to 0 ~ 1 for easier random generation
         self._interval = interarrival
         self._ratio = ratio / (ratio + 1.0)
+        self._parallel = parallel
 
         self._gen = None
 
         self._range = gb * (2 ** 30)
         self._last_clk = 0
+        self._num_trans = 0
         self._last_rd_addr = random.randrange(self._range)
         self._last_wr_addr = random.randrange(self._range)
         if stream_type == 'random':
@@ -56,7 +58,9 @@ class Generator():
 
     def gen(self):
         op, addr = self._gen()
-        self._last_clk += self._interval
+        # self._last_clk += self._interval
+        self._last_clk = self._num_trans // self._parallel * self._interval
+        self._num_trans += 1
         return (op, addr, self._last_clk)
 
 
@@ -112,6 +116,8 @@ if __name__ == '__main__':
                         help='Total number of requests.')
     parser.add_argument('-g', '--gb', type=int, default=4,
                         help='GBs of address space')
+    parser.add_argument('-p', '--parallel', type=int, default=8,
+                        help='Number of parallel requests, usually is the same as the number of channels')
 
     args = parser.parse_args()
 
@@ -137,8 +143,8 @@ if __name__ == '__main__':
 
     files = {}
     for f in formats:
-        file_name = '{}_{}_i{}_n{}_rw{}.trace'.format(
-            f, stream_type, args.interarrival, args.num_reqs, int(args.ratio))
+        file_name = '{}_{}_i{}_n{}_rw{}_c{}.trace'.format(
+            f, stream_type, args.interarrival, args.num_reqs, int(args.ratio), args.parallel)
         if f == 'dramsim2':
             file_name = 'mase_' + file_name
         print("Write to file: ", file_name)
@@ -149,7 +155,7 @@ if __name__ == '__main__':
         fp = open(name, 'w')
         files[f] = fp
 
-    g = Generator(stream_type, args.interarrival, args.ratio, args.gb)
+    g = Generator(stream_type, args.interarrival, args.ratio, args.gb, args.parallel)
     for i in range(args.num_reqs):
         op, addr, clk = g.gen()
         for f in formats:

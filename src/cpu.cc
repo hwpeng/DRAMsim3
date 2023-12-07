@@ -89,4 +89,43 @@ void TraceBasedCPU::ClockTick() {
     return;
 }
 
+TraceBasedAccelerator::TraceBasedAccelerator(const std::string& config_file,
+                                             const std::string& output_dir,
+                                             const std::string& trace_file)
+    : CPU(config_file, output_dir) {
+    trace_file_.open(trace_file);
+    if (trace_file_.fail()) {
+        std::cerr << "Trace file does not exist" << std::endl;
+        AbruptExit(__FILE__, __LINE__);
+    }
+}
+
+void TraceBasedAccelerator::ClockTick() {
+    memory_system_.ClockTick();
+    if (!get_next_) {
+        if (trans_.added_cycle <= clk_) {
+            get_next_ = memory_system_.WillAcceptTransaction(trans_.addr, trans_.is_write);
+            if (get_next_) {
+                memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+            }
+        }
+    }
+    if (!trace_file_.eof()) {
+        while (get_next_) {
+            trace_file_ >> trans_;
+            if (trans_.added_cycle <= clk_) {
+                get_next_ = memory_system_.WillAcceptTransaction(trans_.addr, trans_.is_write);
+                if (get_next_) {
+                    memory_system_.AddTransaction(trans_.addr, trans_.is_write);
+                }
+            } else {
+                get_next_ = false;
+            }    
+            // printf("clk %d, trans cycle %d, addr %#010x\n", clk_, trans_.added_cycle, trans_.addr);
+        }
+    }
+    clk_++;
+    return;
+}
+
 }  // namespace dramsim3

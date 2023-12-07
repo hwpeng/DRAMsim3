@@ -67,5 +67,18 @@ class TraceBasedCPU : public CPU {
     bool get_next_ = true;
 };
 
+class TraceBasedAccelerator : public CPU {
+   public:
+    TraceBasedAccelerator(const std::string& config_file, const std::string& output_dir,
+                          const std::string& trace_file);
+    ~TraceBasedAccelerator() { trace_file_.close(); }
+    void ClockTick() override;
+
+   private:
+    std::ifstream trace_file_;
+    Transaction trans_;
+    bool get_next_ = true;
+};
+
 }  // namespace dramsim3
 #endif
